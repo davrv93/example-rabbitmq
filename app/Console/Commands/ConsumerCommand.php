@@ -26,6 +26,33 @@ class ConsumerCommand extends Command
      *
      * @return int
      */
+
+    /**
+     * queue_declare function: 
+     * Declares queue, creates if needed
+     *
+     * @param string $queue
+     * @param bool $passive
+     * @param bool $durable
+     * @param bool $exclusive
+     * @param bool $auto_delete
+     * @param bool $nowait
+     * @param array|AMQPTable $arguments
+     * @param int|null $ticket
+     * @return array|null
+     *@throws \PhpAmqpLib\Exception\AMQPTimeoutException if the specified operation timeout was exceeded
+    */
+
+    /**
+     * basic_consume function: 
+     * @param string consumer_tag: Consumer identifier
+     * @param bool no_local: Don't receive messages published by this consumer.
+     * @param bool no_ack: If set to true, automatic acknowledgement mode will be used by this consumer. See https://www.rabbitmq.com/confirms.html for details.
+     * @param bool exclusive: Request exclusive consumer access, meaning only this consumer can access the queue
+     * @param bool nowait:
+     * callback: A PHP Callback
+    */
+
     public function handle() 
     {
         $connection = new AMQPStreamConnection(
@@ -33,11 +60,11 @@ class ConsumerCommand extends Command
             , 5672, 'guest', 'guest');
         $channel = $connection->channel();
 
-        //MARCAMOS DURABLE
+
         $channel->queue_declare(
             'task_queue',
             false,
-            true,// RABBIT NO BORRARÁ LOS MENSAJES SI TIENE PROBLEMAS
+            true,
             false,
             false
         );
@@ -46,15 +73,12 @@ class ConsumerCommand extends Command
 
         $callback = function ($msg) {
             echo ' [x] Received ', $msg->body, "\n";
-            //AVISAMOS QUE HEMOS RECIBIDO EL MENSAJE
             $msg->delivery_info['channel']->basic_ack($msg->delivery_info['delivery_tag']);
         };
 
-        //SOLO SE VA A DEJAR UN MENSAJE A UN CONSUMER A LA VEZ
-        //nO LE ENVÍA UN NUEVO MENSAJE HASTA QUE NO PROCESE EL ANTERIOR
+
         $channel->basic_qos(null, 1, null);
 
-        //AVISAR A RABBIT QUE SE HA CONSUMIDO EL MENSAJE
         $channel->basic_consume(
             'task_queue',
             '',
